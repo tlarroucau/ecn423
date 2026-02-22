@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Returns to Education: OLS Bias Simulation</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            color: #2c3e50;
+        }
+        header {
+            background: linear-gradient(135deg, #1a3a5c 0%, #2c5f8a 100%);
+            color: white;
+            padding: 24px 32px;
+            text-align: center;
+        }
+        header h1 { font-size: 1.8em; margin-bottom: 6px; }
+        header p { font-size: 1.0em; opacity: 0.9; }
+        .main-container {
+            display: flex;
+            max-width: 1600px;
+            margin: 0 auto;
+            gap: 16px;
+            padding: 16px;
+        }
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            min-width: 280px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 20px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+            position: sticky;
+            top: 16px;
+        }
+        .sidebar h3 {
+            font-size: 0.95em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #1a3a5c;
+            border-bottom: 2px solid #e0e6ed;
+            padding-bottom: 6px;
+            margin-bottom: 12px;
+            margin-top: 18px;
+        }
+        .sidebar h3:first-child { margin-top: 0; }
+        .slider-group { margin-bottom: 12px; }
+        .slider-group label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85em;
+            margin-bottom: 3px;
+            font-weight: 500;
+        }
+        .slider-group label span.val {
+            font-weight: 700;
+            color: #2c5f8a;
+            min-width: 45px;
+            text-align: right;
+        }
+        .slider-group input[type="range"] {
+            width: 100%;
+            accent-color: #2c5f8a;
+            cursor: pointer;
+        }
+        .slider-group .desc {
+            font-size: 0.75em;
+            color: #888;
+            margin-top: 1px;
+        }
+        /* Charts area */
+        .charts-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .chart-row {
+            display: flex;
+            gap: 16px;
+        }
+        .chart-panel {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 16px;
+            flex: 1;
+        }
+        .chart-panel h4 {
+            font-size: 0.95em;
+            color: #1a3a5c;
+            margin-bottom: 8px;
+        }
+        .chart-panel .plotly-chart {
+            width: 100%;
+            height: 340px;
+        }
+        /* Summary table */
+        .summary-table-panel {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 20px;
+        }
+        .summary-table-panel h4 {
+            font-size: 0.95em;
+            color: #1a3a5c;
+            margin-bottom: 10px;
+        }
+        table.summary {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88em;
+        }
+        table.summary th, table.summary td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        table.summary th { color: #555; font-weight: 600; }
+        table.summary td.val {
+            font-weight: 700;
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+        table.summary tr.highlight { background: #f0f7ff; }
+        table.summary tr.match-row td { color: #27ae60; }
+        .bias-positive { color: #e74c3c !important; }
+        .bias-negative { color: #2980b9 !important; }
+        .bias-zero { color: #27ae60 !important; }
+
+        /* Equations panel */
+        .equations-panel {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 20px;
+            font-size: 0.92em;
+            line-height: 1.7;
+        }
+        .equations-panel h4 {
+            font-size: 0.95em;
+            color: #1a3a5c;
+            margin-bottom: 10px;
+        }
+        .eq-block {
+            background: #f8fafd;
+            border-left: 3px solid #2c5f8a;
+            padding: 10px 14px;
+            margin: 8px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .insight {
+            background: #fef9e7;
+            border-left: 3px solid #f39c12;
+            padding: 10px 14px;
+            margin: 10px 0;
+            border-radius: 0 6px 6px 0;
+            font-size: 0.9em;
+        }
+        button.resim {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 16px;
+            background: linear-gradient(135deg, #1a3a5c 0%, #2c5f8a 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+        }
+        button.resim:hover { opacity: 0.9; }
+        @media (max-width: 1100px) {
+            .main-container { flex-direction: column; }
+            .sidebar { width: 100%; max-height: none; position: static; }
+            .chart-row { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Returns to Education: OLS Bias Simulation</h1>
+        <p>Interactive demonstration of omitted variable bias in Mincer wage regressions &mdash; ECN 423, ASU</p>
+    </header>
+
+    <div class="main-container">
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <h3>Structural Parameters</h3>
+
+            <div class="slider-group">
+                <label>&beta; (true return to education) <span class="val" id="v_beta">0.10</span></label>
+                <input type="range" id="s_beta" min="0.01" max="0.25" step="0.01" value="0.10">
+            </div>
+            <div class="slider-group">
+                <label>&gamma; (return to ability A) <span class="val" id="v_gamma">1.50</span></label>
+                <input type="range" id="s_gamma" min="0" max="3" step="0.05" value="1.50">
+            </div>
+            <div class="slider-group">
+                <label>&delta; (return to skills S) <span class="val" id="v_delta">1.00</span></label>
+                <input type="range" id="s_delta" min="0" max="3" step="0.05" value="1.00">
+            </div>
+            <div class="slider-group">
+                <label>&alpha; (intercept) <span class="val" id="v_alpha">2.00</span></label>
+                <input type="range" id="s_alpha" min="0" max="5" step="0.1" value="2.0">
+            </div>
+            <div class="slider-group">
+                <label>T (cost parameter) <span class="val" id="v_T">0.004</span></label>
+                <input type="range" id="s_T" min="0.001" max="0.02" step="0.001" value="0.004">
+            </div>
+            <div class="slider-group">
+                <label>&sigma;<sub>&epsilon;</sub> (noise std dev) <span class="val" id="v_sigeps">0.20</span></label>
+                <input type="range" id="s_sigeps" min="0" max="1.5" step="0.05" value="0.20">
+            </div>
+
+            <h3>Ability Distribution (A)</h3>
+            <div class="slider-group">
+                <label>&mu;<sub>A</sub> (log-mean) <span class="val" id="v_muA">0.00</span></label>
+                <input type="range" id="s_muA" min="-1" max="2" step="0.1" value="0.0">
+            </div>
+            <div class="slider-group">
+                <label>&sigma;<sub>A</sub> (log-std) <span class="val" id="v_sigA">0.20</span></label>
+                <input type="range" id="s_sigA" min="0.05" max="1.5" step="0.05" value="0.20">
+            </div>
+
+            <h3>Skills Distribution (S)</h3>
+            <div class="slider-group">
+                <label>&mu;<sub>S</sub> (log-mean) <span class="val" id="v_muS">0.00</span></label>
+                <input type="range" id="s_muS" min="-1" max="2" step="0.1" value="0.0">
+            </div>
+            <div class="slider-group">
+                <label>&sigma;<sub>S</sub> (log-std) <span class="val" id="v_sigS">0.15</span></label>
+                <input type="range" id="s_sigS" min="0.05" max="1.5" step="0.05" value="0.15">
+            </div>
+
+            <h3>Sample</h3>
+            <div class="slider-group">
+                <label>N (sample size) <span class="val" id="v_N">1000</span></label>
+                <input type="range" id="s_N" min="200" max="5000" step="100" value="1000">
+            </div>
+
+            <button class="resim" onclick="runSimulation()">&#x21bb; Re-draw &amp; Re-simulate</button>
+        </div>
+
+        <!-- CHARTS -->
+        <div class="charts-area">
+            <!-- Equations -->
+            <div class="equations-panel">
+                <h4>Data Generating Process (DGP)</h4>
+                <div class="eq-block">
+                    <b>True wage equation:</b>&ensp; \(\ln W_i = \alpha + \beta\, E_i + \gamma\, A_i + \delta\, S_i + \varepsilon_i\), &ensp; \(\varepsilon_i \sim \mathcal{N}(0,\sigma_\varepsilon^2)\)
+                </div>
+                <div class="eq-block">
+                    <b>Optimal education</b> (from FOC of \(\max_{E}\; \ln W - C\), with \(C_i = T E^2 S_i^2 / A_i\)):
+                    &ensp; \(E_i^* = \dfrac{\beta\, A_i}{2\,T\, S_i^2}\)
+                </div>
+                <div class="eq-block">
+                    <b>Misspecified Mincer regression (OLS):</b>&ensp; \(\ln W_i = \hat\alpha + \hat\beta_{\text{OLS}}\, E_i + u_i\)
+                </div>
+                <div class="eq-block">
+                    <b>OVB decomposition:</b>&ensp;
+                    \(\hat\beta_{\text{OLS}} \;\xrightarrow{p}\; \beta \;+\; \underbrace{\gamma \cdot \dfrac{\text{Cov}(E,A)}{\text{Var}(E)}}_{\text{ability bias}\;(+)} \;+\; \underbrace{\delta \cdot \dfrac{\text{Cov}(E,S)}{\text{Var}(E)}}_{\text{skills bias}\;(-)}\)
+                </div>
+                <div class="insight">
+                    <b>Key insight:</b> The empirical bias \((\hat\beta_{\text{OLS}} - \beta)\) computed from the simulation should <b>exactly match</b> the OVB formula decomposition &mdash; confirming that the bias is entirely due to omitted variables.
+                </div>
+            </div>
+
+            <!-- Row 1: Scatter + Bias decomposition -->
+            <div class="chart-row">
+                <div class="chart-panel" style="flex: 1.3;">
+                    <h4>Panel 1: Education vs Log Wages &mdash; OLS Lines</h4>
+                    <div id="chart_scatter" class="plotly-chart"></div>
+                </div>
+                <div class="chart-panel" style="flex: 0.7;">
+                    <h4>Panel 2: Bias Decomposition (Waterfall)</h4>
+                    <div id="chart_bias" class="plotly-chart"></div>
+                </div>
+            </div>
+
+            <!-- Row 2: Distributions -->
+            <div class="chart-row">
+                <div class="chart-panel">
+                    <h4>Panel 3a: Ability (A) Distribution</h4>
+                    <div id="chart_histA" class="plotly-chart" style="height:260px;"></div>
+                </div>
+                <div class="chart-panel">
+                    <h4>Panel 3b: Skills (S) Distribution</h4>
+                    <div id="chart_histS" class="plotly-chart" style="height:260px;"></div>
+                </div>
+                <div class="chart-panel">
+                    <h4>Panel 3c: Optimal Education (E*) Distribution</h4>
+                    <div id="chart_histE" class="plotly-chart" style="height:260px;"></div>
+                </div>
+            </div>
+
+            <!-- Summary table -->
+            <div class="summary-table-panel">
+                <h4>Panel 4: Summary Statistics &amp; Bias Comparison</h4>
+                <table class="summary" id="summary_table">
+                    <thead>
+                        <tr><th style="width:50%;">Statistic</th><th class="val">Value</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ===================== UTILITY FUNCTIONS =====================
+
+// Box-Muller for standard normal
+function randn() {
+    let u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+// Log-normal sample
+function rlogn(mu, sigma) {
+    return Math.exp(mu + sigma * randn());
+}
+
+// Mean of array
+function mean(arr) {
+    let s = 0; for (let i = 0; i < arr.length; i++) s += arr[i];
+    return s / arr.length;
+}
+
+// Covariance
+function cov(x, y) {
+    const mx = mean(x), my = mean(y);
+    let s = 0;
+    for (let i = 0; i < x.length; i++) s += (x[i] - mx) * (y[i] - my);
+    return s / (x.length - 1);
+}
+
+// Variance
+function variance(x) { return cov(x, x); }
+
+// Simple OLS: y = a + b*x, returns {a, b}
+function ols(x, y) {
+    const b = cov(x, y) / variance(x);
+    const a = mean(y) - b * mean(x);
+    return {a, b};
+}
+
+// Multiple OLS: y = a + b1*x1 + b2*x2 + b3*x3 (via normal equations, 3 regressors)
+function ols3(y, x1, x2, x3) {
+    const n = y.length;
+    // Build X'X (4x4) and X'y (4x1) manually for [1, x1, x2, x3]
+    const X = [];
+    for (let i = 0; i < n; i++) X.push([1, x1[i], x2[i], x3[i]]);
+    const k = 4;
+    // X'X
+    const XtX = Array.from({length: k}, () => new Float64Array(k));
+    const Xty = new Float64Array(k);
+    for (let i = 0; i < n; i++) {
+        for (let j = 0; j < k; j++) {
+            Xty[j] += X[i][j] * y[i];
+            for (let l = 0; l < k; l++) {
+                XtX[j][l] += X[i][j] * X[i][l];
+            }
+        }
+    }
+    // Solve via Gaussian elimination
+    const aug = XtX.map((row, i) => [...row, Xty[i]]);
+    for (let col = 0; col < k; col++) {
+        let maxRow = col;
+        for (let row = col + 1; row < k; row++) {
+            if (Math.abs(aug[row][col]) > Math.abs(aug[maxRow][col])) maxRow = row;
+        }
+        [aug[col], aug[maxRow]] = [aug[maxRow], aug[col]];
+        const pivot = aug[col][col];
+        for (let j = col; j <= k; j++) aug[col][j] /= pivot;
+        for (let row = 0; row < k; row++) {
+            if (row === col) continue;
+            const factor = aug[row][col];
+            for (let j = col; j <= k; j++) aug[row][j] -= factor * aug[col][j];
+        }
+    }
+    return { a: aug[0][k], b1: aug[1][k], b2: aug[2][k], b3: aug[3][k] };
+}
+
+// ===================== SIMULATION =====================
+
+function getParams() {
+    return {
+        beta:   parseFloat(document.getElementById('s_beta').value),
+        gamma:  parseFloat(document.getElementById('s_gamma').value),
+        delta:  parseFloat(document.getElementById('s_delta').value),
+        alpha:  parseFloat(document.getElementById('s_alpha').value),
+        T:      parseFloat(document.getElementById('s_T').value),
+        sigeps: parseFloat(document.getElementById('s_sigeps').value),
+        muA:    parseFloat(document.getElementById('s_muA').value),
+        sigA:   parseFloat(document.getElementById('s_sigA').value),
+        muS:    parseFloat(document.getElementById('s_muS').value),
+        sigS:   parseFloat(document.getElementById('s_sigS').value),
+        N:      parseInt(document.getElementById('s_N').value),
+    };
+}
+
+function simulate(p) {
+    const A = [], S = [], E = [], lnW = [], eps = [];
+    for (let i = 0; i < p.N; i++) {
+        const ai = rlogn(p.muA, p.sigA);
+        const si = rlogn(p.muS, p.sigS);
+        // Optimal education: E* = beta * A / (2 * T * S^2)
+        let ei = (p.beta * ai) / (2 * p.T * si * si);
+        ei = Math.max(0, ei);
+        const epsi = p.sigeps * randn();
+        const lwi = p.alpha + p.beta * ei + p.gamma * ai + p.delta * si + epsi;
+        A.push(ai);
+        S.push(si);
+        E.push(ei);
+        eps.push(epsi);
+        lnW.push(lwi);
+    }
+
+    // --- OLS regressions ---
+    // Short: lnW on E only
+    const olsShort = ols(E, lnW);
+    // Long: lnW on E, A, S
+    const olsLong = ols3(lnW, E, A, S);
+    // Auxiliary: A on E, S on E
+    const auxA = ols(E, A);
+    const auxS = ols(E, S);
+
+    // --- Bias ---
+    const biasEmpirical = olsShort.b - p.beta;
+    const covEA = cov(E, A);
+    const covES = cov(E, S);
+    const varE = variance(E);
+    const abilityBias = p.gamma * (covEA / varE);
+    const skillsBias = p.delta * (covES / varE);
+    const biasFormula = abilityBias + skillsBias;
+
+    return {
+        A, S, E, lnW, eps,
+        olsShort, olsLong, auxA, auxS,
+        biasEmpirical, biasFormula,
+        abilityBias, skillsBias,
+        covEA, covES, varE,
+        meanE: mean(E), meanLnW: mean(lnW),
+        meanA: mean(A), meanS: mean(S),
+    };
+}
+
+// ===================== PLOTTING =====================
+
+const plotlyConfig = {responsive: true, displayModeBar: false};
+const colorOLS = '#e74c3c';
+const colorTrue = '#27ae60';
+const colorLong = '#2980b9';
+const colorAbility = '#e67e22';
+const colorSkills = '#8e44ad';
+
+function plotScatter(res, p) {
+    // Color points by ability (normalized)
+    const aMin = Math.min(...res.A), aMax = Math.max(...res.A);
+    const aColors = res.A.map(a => (a - aMin) / (aMax - aMin + 1e-9));
+
+    const scatter = {
+        x: res.E, y: res.lnW,
+        mode: 'markers',
+        type: 'scatter',
+        marker: {
+            size: 4, opacity: 0.5,
+            color: aColors,
+            colorscale: [[0, '#3498db'], [0.5, '#f1c40f'], [1, '#e74c3c']],
+            colorbar: { title: 'Ability (A)', thickness: 12, len: 0.6 }
+        },
+        name: 'Individuals',
+        hovertemplate: 'E=%{x:.1f}, ln(W)=%{y:.2f}<extra></extra>'
+    };
+
+    // Regression lines over range of E
+    const eMin = Math.max(0, Math.min(...res.E) - 1);
+    const eMax = Math.min(25, Math.max(...res.E) + 1);
+    const eGrid = [eMin, eMax];
+
+    const lineOLS = {
+        x: eGrid,
+        y: eGrid.map(e => res.olsShort.a + res.olsShort.b * e),
+        mode: 'lines', type: 'scatter',
+        line: { color: colorOLS, width: 3, dash: 'dash' },
+        name: `OLS biased (\u03b2\u0302=${res.olsShort.b.toFixed(4)})`
+    };
+
+    const lineTrue = {
+        x: eGrid,
+        y: eGrid.map(e => res.meanLnW + p.beta * (e - res.meanE)),
+        mode: 'lines', type: 'scatter',
+        line: { color: colorTrue, width: 3 },
+        name: `True \u03b2=${p.beta.toFixed(4)}`
+    };
+
+    const lineLong = {
+        x: eGrid,
+        y: eGrid.map(e => res.meanLnW + res.olsLong.b1 * (e - res.meanE)),
+        mode: 'lines', type: 'scatter',
+        line: { color: colorLong, width: 3, dash: 'dot' },
+        name: `OLS long (\u03b2\u0302=${res.olsLong.b1.toFixed(4)})`
+    };
+
+    const layout = {
+        xaxis: { title: 'Years of Education (E*)', range: [eMin, eMax] },
+        yaxis: { title: 'Log Wages (ln W)' },
+        legend: { x: 0.02, y: 0.98, bgcolor: 'rgba(255,255,255,0.85)', font: {size: 11} },
+        margin: { t: 10, r: 10, b: 50, l: 55 },
+        font: { family: 'Segoe UI, sans-serif' }
+    };
+
+    Plotly.newPlot('chart_scatter', [scatter, lineTrue, lineOLS, lineLong], layout, plotlyConfig);
+}
+
+function plotBias(res, p) {
+    // Waterfall-style bar chart
+    const categories = ['True \u03b2', 'Ability bias<br>(+\u03b3\u00b7Cov/Var)', 'Skills bias<br>(+\u03b4\u00b7Cov/Var)', '\u03b2\u0302_OLS'];
+    const values = [p.beta, res.abilityBias, res.skillsBias, res.olsShort.b];
+    const colors = [colorTrue, colorAbility, colorSkills, colorOLS];
+
+    // Build waterfall manually with base + bar
+    const bases = [0, p.beta, p.beta + res.abilityBias, 0];
+    const heights = [p.beta, res.abilityBias, res.skillsBias, res.olsShort.b];
+
+    const bars = {
+        x: categories,
+        y: heights,
+        base: bases,
+        type: 'bar',
+        marker: { color: colors, opacity: 0.85, line: { width: 1.5, color: '#fff' } },
+        text: heights.map(v => v.toFixed(4)),
+        textposition: 'outside',
+        textfont: { size: 12, color: '#333' },
+        hovertemplate: '%{x}: %{y:.4f}<extra></extra>'
+    };
+
+    // Connector lines
+    const connectors = {
+        x: ['True \u03b2', 'Ability bias<br>(+\u03b3\u00b7Cov/Var)', 'Skills bias<br>(+\u03b4\u00b7Cov/Var)'],
+        y: [p.beta, p.beta + res.abilityBias, p.beta + res.abilityBias + res.skillsBias],
+        mode: 'lines+markers',
+        type: 'scatter',
+        line: { color: '#aaa', width: 1.5, dash: 'dot' },
+        marker: { size: 0 },
+        showlegend: false,
+        hoverinfo: 'skip'
+    };
+
+    // Annotation: empirical vs formula
+    const layout = {
+        yaxis: { title: 'Coefficient value', zeroline: true, zerolinewidth: 2, zerolinecolor: '#ccc' },
+        margin: { t: 10, r: 10, b: 70, l: 55 },
+        font: { family: 'Segoe UI, sans-serif' },
+        annotations: [{
+            x: 0.5, y: -0.32, xref: 'paper', yref: 'paper',
+            text: `Empirical bias: ${res.biasEmpirical >= 0 ? '+' : ''}${res.biasEmpirical.toFixed(4)}` +
+                  ` &nbsp;|&nbsp; Formula bias: ${res.biasFormula >= 0 ? '+' : ''}${res.biasFormula.toFixed(4)}`,
+            showarrow: false,
+            font: { size: 12, color: '#555' }
+        }],
+        showlegend: false
+    };
+
+    Plotly.newPlot('chart_bias', [bars], layout, plotlyConfig);
+}
+
+function plotHistograms(res) {
+    const histLayout = (title, color, xlab) => ({
+        xaxis: { title: xlab },
+        yaxis: { title: 'Frequency' },
+        margin: { t: 10, r: 10, b: 45, l: 50 },
+        font: { family: 'Segoe UI, sans-serif' },
+        bargap: 0.05,
+        showlegend: false
+    });
+
+    Plotly.newPlot('chart_histA', [{
+        x: res.A, type: 'histogram', nbinsx: 40,
+        marker: { color: colorAbility, opacity: 0.75, line: { width: 0.5, color: '#fff' } }
+    }], histLayout('Ability', colorAbility, 'Ability (A)'), plotlyConfig);
+
+    Plotly.newPlot('chart_histS', [{
+        x: res.S, type: 'histogram', nbinsx: 40,
+        marker: { color: colorSkills, opacity: 0.75, line: { width: 0.5, color: '#fff' } }
+    }], histLayout('Skills', colorSkills, 'Skills (S)'), plotlyConfig);
+
+    Plotly.newPlot('chart_histE', [{
+        x: res.E, type: 'histogram', nbinsx: 40,
+        marker: { color: '#2c5f8a', opacity: 0.75, line: { width: 0.5, color: '#fff' } }
+    }], histLayout('Education', '#2c5f8a', 'Years of Education (E*)'), plotlyConfig);
+}
+
+function updateTable(res, p) {
+    const biasClass = res.biasEmpirical > 0.001 ? 'bias-positive' :
+                      res.biasEmpirical < -0.001 ? 'bias-negative' : 'bias-zero';
+    const sign = v => (v >= 0 ? '+' : '') + v.toFixed(4);
+
+    const rows = [
+        ['True causal return (\u03b2)', p.beta.toFixed(4), ''],
+        ['OLS short estimate (\u03b2\u0302<sub>OLS</sub>)', res.olsShort.b.toFixed(4), biasClass],
+        ['OLS long estimate (\u03b2\u0302<sub>long</sub>)', res.olsLong.b1.toFixed(4), ''],
+        ['', '', ''],
+        ['<b>Empirical bias</b> (\u03b2\u0302<sub>OLS</sub> \u2212 \u03b2)', sign(res.biasEmpirical), biasClass + ' highlight'],
+        ['<b>OVB formula bias</b> (\u03b3\u00b7\u03b4<sub>A</sub> + \u03b4\u00b7\u03b4<sub>S</sub>)', sign(res.biasFormula), biasClass + ' highlight'],
+        ['', '', ''],
+        ['Ability bias component (\u03b3 \u00b7 Cov(E,A)/Var(E))', sign(res.abilityBias), 'bias-positive'],
+        ['Skills bias component (\u03b4 \u00b7 Cov(E,S)/Var(E))', sign(res.skillsBias), 'bias-negative'],
+        ['', '', ''],
+        ['Cov(E, A)', res.covEA.toFixed(4), ''],
+        ['Cov(E, S)', res.covES.toFixed(4), ''],
+        ['Var(E)', res.varE.toFixed(4), ''],
+        ['Mean(E*)', res.meanE.toFixed(2), ''],
+        ['Mean(A)', res.meanA.toFixed(2), ''],
+        ['Mean(S)', res.meanS.toFixed(2), ''],
+        ['N', p.N, ''],
+    ];
+
+    const tbody = document.querySelector('#summary_table tbody');
+    tbody.innerHTML = rows.map(([label, val, cls]) => {
+        if (!label && !val) return '<tr><td colspan="2" style="height:6px;border:none;"></td></tr>';
+        const trClass = cls.includes('highlight') ? ' class="highlight"' : '';
+        const tdClass = cls.replace('highlight', '').trim();
+        return `<tr${trClass}><td>${label}</td><td class="val ${tdClass}">${val}</td></tr>`;
+    }).join('');
+}
+
+// ===================== MAIN =====================
+
+function runSimulation() {
+    const p = getParams();
+    const res = simulate(p);
+    plotScatter(res, p);
+    plotBias(res, p);
+    plotHistograms(res);
+    updateTable(res, p);
+}
+
+// Update slider display values
+function setupSliders() {
+    const sliders = [
+        ['s_beta', 'v_beta', v => parseFloat(v).toFixed(2)],
+        ['s_gamma', 'v_gamma', v => parseFloat(v).toFixed(2)],
+        ['s_delta', 'v_delta', v => parseFloat(v).toFixed(2)],
+        ['s_alpha', 'v_alpha', v => parseFloat(v).toFixed(2)],
+        ['s_T', 'v_T', v => parseFloat(v).toFixed(3)],
+        ['s_sigeps', 'v_sigeps', v => parseFloat(v).toFixed(2)],
+        ['s_muA', 'v_muA', v => parseFloat(v).toFixed(2)],
+        ['s_sigA', 'v_sigA', v => parseFloat(v).toFixed(2)],
+        ['s_muS', 'v_muS', v => parseFloat(v).toFixed(2)],
+        ['s_sigS', 'v_sigS', v => parseFloat(v).toFixed(2)],
+        ['s_N', 'v_N', v => parseInt(v)],
+    ];
+    sliders.forEach(([sid, vid, fmt]) => {
+        const slider = document.getElementById(sid);
+        const valEl = document.getElementById(vid);
+        slider.addEventListener('input', () => {
+            valEl.textContent = fmt(slider.value);
+            runSimulation();
+        });
+    });
+}
+
+// Init
+window.addEventListener('DOMContentLoaded', () => {
+    setupSliders();
+    runSimulation();
+    // Re-render MathJax after DOM is ready
+    if (window.MathJax && MathJax.typesetPromise) {
+        MathJax.typesetPromise();
+    }
+});
+</script>
+</body>
+</html>
