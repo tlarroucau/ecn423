@@ -1,0 +1,1831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Education Production Function — Interactive Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #0c1021;
+    --bg-card: #141929;
+    --bg-surface: #1a2035;
+    --bg-hover: #222a42;
+    --border: #2a3455;
+    --text-primary: #e8ecf4;
+    --text-secondary: #8892b0;
+    --text-muted: #5a6380;
+    --accent-gold: #f0bc56;
+    --accent-amber: #e8913a;
+    --accent-teal: #56d4c8;
+    --accent-blue: #5b9cf5;
+    --accent-rose: #f07070;
+    --accent-violet: #a78bfa;
+    --accent-green: #6ee7a0;
+    --isoquant-1: #f0bc56;
+    --isoquant-2: #e8913a;
+    --isoquant-3: #f07070;
+    --isoquant-opt: #56d4c8;
+    --budget-line: #5b9cf5;
+    --optimal-dot: #6ee7a0;
+    --grid-line: rgba(42, 52, 85, 0.5);
+    --chalk: rgba(232, 236, 244, 0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { font-size: 14px; }
+
+  body {
+    font-family: 'Source Sans 3', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* Header */
+  .header {
+    padding: 0.7rem 2rem 0.5rem;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(20, 25, 41, 0.95) 0%, var(--bg-deep) 100%);
+    position: relative;
+  }
+
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 2rem;
+    right: 2rem;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
+  }
+
+  .header-top {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .header h1 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 1.3rem;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--accent-gold), var(--accent-amber));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .header .subtitle {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .header .lecture-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent-teal);
+    background: rgba(86, 212, 200, 0.1);
+    border: 1px solid rgba(86, 212, 200, 0.2);
+    padding: 0.2rem 0.6rem;
+    border-radius: 3px;
+    letter-spacing: 0.05em;
+  }
+
+  /* Main layout */
+  .main {
+    display: grid;
+    grid-template-columns: 280px 1fr 270px;
+    gap: 0;
+    height: calc(100vh - 62px);
+    overflow: hidden;
+  }
+
+  /* Panels */
+  .panel {
+    padding: 0.8rem 1rem;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+  }
+
+  .panel:last-child { border-right: none; }
+
+  .panel-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 0.6rem;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .panel-title .icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+  }
+
+  /* Section labels */
+  .section-label {
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+    margin-top: 0.8rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-label:first-child { margin-top: 0; }
+
+  /* Slider controls */
+  .control-group {
+    margin-bottom: 0.5rem;
+  }
+
+  .control-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.4rem;
+  }
+
+  .control-label span:first-child {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .control-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--accent-gold);
+    font-weight: 500;
+    min-width: 50px;
+    text-align: right;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent-gold);
+    cursor: pointer;
+    border: 2px solid var(--bg-deep);
+    box-shadow: 0 0 8px rgba(240, 188, 86, 0.3);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 14px rgba(240, 188, 86, 0.5);
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent-gold);
+    cursor: pointer;
+    border: 2px solid var(--bg-deep);
+    box-shadow: 0 0 8px rgba(240, 188, 86, 0.3);
+  }
+
+  /* Color variants for sliders */
+  .slider-teal::-webkit-slider-thumb { background: var(--accent-teal); box-shadow: 0 0 8px rgba(86, 212, 200, 0.3); }
+  .slider-teal::-moz-range-thumb { background: var(--accent-teal); box-shadow: 0 0 8px rgba(86, 212, 200, 0.3); }
+  .slider-blue::-webkit-slider-thumb { background: var(--accent-blue); box-shadow: 0 0 8px rgba(91, 156, 245, 0.3); }
+  .slider-blue::-moz-range-thumb { background: var(--accent-blue); box-shadow: 0 0 8px rgba(91, 156, 245, 0.3); }
+  .slider-rose::-webkit-slider-thumb { background: var(--accent-rose); box-shadow: 0 0 8px rgba(240, 112, 112, 0.3); }
+  .slider-rose::-moz-range-thumb { background: var(--accent-rose); box-shadow: 0 0 8px rgba(240, 112, 112, 0.3); }
+
+  /* Graph area */
+  .graph-area {
+    display: flex;
+    flex-direction: column;
+    padding: 0.8rem 1rem;
+    background: var(--bg-card);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .graph-container {
+    flex: 1;
+    position: relative;
+    min-height: 0;
+  }
+
+  canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+  }
+
+  /* Tabs above graph */
+  .graph-tabs {
+    display: flex;
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+  }
+
+  .graph-tab {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .graph-tab:hover {
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+  }
+
+  .graph-tab.active {
+    background: rgba(240, 188, 86, 0.1);
+    border-color: rgba(240, 188, 86, 0.3);
+    color: var(--accent-gold);
+  }
+
+  /* Info cards in the right panel */
+  .info-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .info-card.highlight {
+    border-color: rgba(240, 188, 86, 0.3);
+    background: linear-gradient(135deg, rgba(240, 188, 86, 0.05), rgba(232, 145, 58, 0.03));
+  }
+
+  .info-card.optimal {
+    border-color: rgba(110, 231, 160, 0.3);
+    background: linear-gradient(135deg, rgba(110, 231, 160, 0.05), rgba(86, 212, 200, 0.03));
+  }
+
+  .info-card-title {
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+  }
+
+  .equation {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text-primary);
+    line-height: 1.8;
+    padding: 0.2rem 0;
+  }
+
+  .equation .var { color: var(--accent-gold); }
+  .equation .val { color: var(--accent-teal); font-weight: 500; }
+  .equation .op { color: var(--text-muted); }
+  .equation .eq-symbol { color: var(--accent-rose); }
+
+  .result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.2rem 0;
+    border-bottom: 1px solid rgba(42, 52, 85, 0.4);
+  }
+
+  .result-row:last-child { border-bottom: none; }
+
+  .result-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .result-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 500;
+  }
+
+  .result-value.gold { color: var(--accent-gold); }
+  .result-value.teal { color: var(--accent-teal); }
+  .result-value.green { color: var(--accent-green); }
+  .result-value.blue { color: var(--accent-blue); }
+  .result-value.rose { color: var(--accent-rose); }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 0.8rem 0;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .legend-swatch {
+    width: 18px;
+    height: 3px;
+    border-radius: 1.5px;
+  }
+
+  .legend-swatch.dashed {
+    background: repeating-linear-gradient(90deg, var(--accent-blue), var(--accent-blue) 4px, transparent 4px, transparent 8px);
+  }
+
+  /* Preset buttons */
+  .preset-btn {
+    width: 100%;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
+    border-radius: 5px;
+    color: var(--text-secondary);
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 0.3rem;
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .preset-btn:hover {
+    background: var(--bg-hover);
+    border-color: rgba(240, 188, 86, 0.3);
+    color: var(--text-primary);
+  }
+
+  .preset-btn .preset-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent-teal);
+    opacity: 0.7;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    position: absolute;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.75rem;
+    pointer-events: none;
+    z-index: 100;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    display: none;
+    min-width: 160px;
+  }
+
+  .tooltip .tt-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.15rem 0;
+  }
+
+  .tooltip .tt-label { color: var(--text-muted); }
+  .tooltip .tt-val { font-family: 'JetBrains Mono', monospace; color: var(--accent-gold); }
+
+  /* Step indicator */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+  }
+
+  .step {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    padding: 0.4rem;
+    border-radius: 5px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .step:hover {
+    background: var(--bg-hover);
+  }
+
+  .step.active {
+    border-color: rgba(240, 188, 86, 0.4);
+    background: rgba(240, 188, 86, 0.05);
+  }
+
+  .step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 600;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--border);
+    color: var(--text-muted);
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+    transition: all 0.3s ease;
+  }
+
+  .step.active .step-num {
+    background: var(--accent-gold);
+    color: var(--bg-deep);
+  }
+
+  .step-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .step-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.2rem;
+    transition: color 0.3s ease;
+  }
+
+  .step.active .step-title { color: var(--accent-gold); }
+
+  .step-desc {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .step-eq {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent-teal);
+    margin-top: 0.3rem;
+    word-break: break-all;
+  }
+
+  /* Toggle switch */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.3rem;
+    padding: 0.15rem 0;
+  }
+
+  .toggle-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .toggle-switch {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    cursor: pointer;
+  }
+
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 10px;
+    transition: background 0.25s ease;
+  }
+
+  .toggle-switch input:checked + .toggle-track {
+    background: rgba(240, 188, 86, 0.4);
+  }
+
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    top: 3px;
+    left: 3px;
+    transition: all 0.25s ease;
+  }
+
+  .toggle-switch input:checked + .toggle-track::after {
+    transform: translateX(16px);
+    background: var(--accent-gold);
+  }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .panel { animation: fadeIn 0.5s ease; }
+  .graph-area { animation: fadeIn 0.5s ease 0.1s both; }
+  .panel:last-child { animation: fadeIn 0.5s ease 0.2s both; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .main {
+      grid-template-columns: 1fr;
+    }
+    .panel { border-right: none; border-bottom: 1px solid var(--border); }
+    .graph-container { min-height: 300px; }
+  }
+
+  /* Small utility */
+  .mt-1 { margin-top: 0.6rem; }
+  .mb-1 { margin-bottom: 0.6rem; }
+  .text-gold { color: var(--accent-gold); }
+  .text-teal { color: var(--accent-teal); }
+  .text-blue { color: var(--accent-blue); }
+  .text-rose { color: var(--accent-rose); }
+
+  /* Katex-like inline math styling */
+  .math {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--text-primary);
+  }
+
+  .math sub { font-size: 0.65em; vertical-align: sub; }
+  .math sup { font-size: 0.65em; vertical-align: super; }
+
+  /* Notification badge */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    margin-left: 0.4rem;
+  }
+
+  .badge-green {
+    background: rgba(110, 231, 160, 0.1);
+    color: var(--accent-green);
+    border: 1px solid rgba(110, 231, 160, 0.2);
+  }
+
+  .badge-rose {
+    background: rgba(240, 112, 112, 0.1);
+    color: var(--accent-rose);
+    border: 1px solid rgba(240, 112, 112, 0.2);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <h1>Education Production Function</h1>
+    <span class="lecture-tag">ECN 423 / Lectures 10-11</span>
+  </div>
+  <div class="subtitle">Interactive Cost Minimization &amp; Optimal Input Allocation</div>
+</div>
+
+<div class="main">
+
+  <!-- LEFT PANEL — Controls -->
+  <div class="panel" id="controls-panel">
+    <div class="panel-title">
+      <span class="icon" style="background: rgba(240,188,86,0.15); color: var(--accent-gold);">⚙</span>
+      Parameters
+    </div>
+
+    <div class="section-label">Production Function</div>
+
+    <div class="control-group">
+      <div class="control-label">
+        <span>TFP (A)</span>
+        <span class="control-value" id="val-A">2.00</span>
+      </div>
+      <input type="range" id="slider-A" min="0.5" max="5" step="0.1" value="2">
+    </div>
+
+    <div class="control-group">
+      <div class="control-label">
+        <span>α (Computers exponent)</span>
+        <span class="control-value" id="val-alpha">0.50</span>
+      </div>
+      <input type="range" id="slider-alpha" min="0.05" max="0.95" step="0.05" value="0.5" class="slider-teal">
+    </div>
+
+    <div class="control-group">
+      <div class="control-label">
+        <span>β (Teachers exponent)</span>
+        <span class="control-value" id="val-beta">0.50</span>
+      </div>
+      <input type="range" id="slider-beta" min="0.05" max="0.95" step="0.05" value="0.5" class="slider-teal">
+    </div>
+
+    <div class="section-label">Budget Constraint</div>
+
+    <div class="control-group">
+      <div class="control-label">
+        <span>Total Budget (R)</span>
+        <span class="control-value" id="val-R">$320</span>
+      </div>
+      <input type="range" id="slider-R" min="50" max="800" step="10" value="320" class="slider-blue">
+    </div>
+
+    <div class="control-group">
+      <div class="control-label">
+        <span>Price of Computers (P<sub>C</sub>)</span>
+        <span class="control-value" id="val-Pc">$2</span>
+      </div>
+      <input type="range" id="slider-Pc" min="0.5" max="20" step="0.5" value="2" class="slider-blue">
+    </div>
+
+    <div class="control-group">
+      <div class="control-label">
+        <span>Price of Teachers (P<sub>T</sub>)</span>
+        <span class="control-value" id="val-Pt">$16</span>
+      </div>
+      <input type="range" id="slider-Pt" min="1" max="50" step="1" value="16" class="slider-blue">
+    </div>
+
+    <div class="section-label">Display Options</div>
+
+    <div class="toggle-row">
+      <span class="toggle-label">Show isoquant family</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="toggle-isoquants" checked>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <span class="toggle-label">Show marginal products</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="toggle-mp" checked>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <span class="toggle-label">Show derivation steps</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="toggle-steps">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <span class="toggle-label">Exploration mode</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="toggle-explore">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <div class="section-label">Presets</div>
+
+    <button class="preset-btn" onclick="applyPreset('lecture')">
+      Lecture Example <span class="preset-tag">α=β=0.5</span>
+    </button>
+    <button class="preset-btn" onclick="applyPreset('tech-heavy')">
+      Tech-Heavy School <span class="preset-tag">α=0.7</span>
+    </button>
+    <button class="preset-btn" onclick="applyPreset('teacher-focus')">
+      Teacher-Focused <span class="preset-tag">β=0.7</span>
+    </button>
+    <button class="preset-btn" onclick="applyPreset('tight-budget')">
+      Tight Budget <span class="preset-tag">R=120</span>
+    </button>
+    <button class="preset-btn" onclick="applyPreset('rich-district')">
+      Well-Funded District <span class="preset-tag">R=600</span>
+    </button>
+  </div>
+
+  <!-- CENTER — Graph -->
+  <div class="graph-area">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div class="graph-tabs">
+        <button class="graph-tab active" data-view="main" onclick="setView('main', this)">Isoquant Map</button>
+        <button class="graph-tab" data-view="mp" onclick="setView('mp', this)">Marginal Products</button>
+        <button class="graph-tab" data-view="policy" onclick="setView('policy', this)">Policy Simulator</button>
+      </div>
+      <div class="legend" id="legend-main">
+        <div class="legend-item"><span class="legend-swatch" style="background: var(--isoquant-1);"></span>Isoquants</div>
+        <div class="legend-item"><span class="legend-swatch dashed"></span>Budget Line</div>
+        <div class="legend-item"><span class="legend-swatch" style="background: var(--optimal-dot); width: 8px; height: 8px; border-radius: 50%;"></span>Optimal</div>
+      </div>
+    </div>
+
+    <div class="graph-container">
+      <canvas id="mainCanvas"></canvas>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL — Info / Derivation -->
+  <div class="panel" id="info-panel">
+    <div class="panel-title">
+      <span class="icon" style="background: rgba(86,212,200,0.15); color: var(--accent-teal);">∑</span>
+      Results
+    </div>
+
+    <!-- Production Function Card -->
+    <div class="info-card highlight">
+      <div class="info-card-title">Production Function</div>
+      <div class="equation" id="eq-production">
+        <span class="var">A</span> <span class="op">=</span> <span class="val">2</span> <span class="op">·</span> <span class="var">C</span><sup><span class="val">0.5</span></sup> <span class="op">·</span> <span class="var">T</span><sup><span class="val">0.5</span></sup>
+      </div>
+    </div>
+
+    <!-- Optimal Allocation Card -->
+    <div class="info-card optimal" id="card-optimal">
+      <div class="info-card-title">Optimal Allocation <span class="badge badge-green" id="badge-status">✓ TANGENT</span></div>
+      <div class="result-row">
+        <span class="result-label">Computers (C*)</span>
+        <span class="result-value gold" id="res-Cstar">80.0</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">Teachers (T*)</span>
+        <span class="result-value gold" id="res-Tstar">10.0</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">Achievement (A*)</span>
+        <span class="result-value green" id="res-Astar">56.57</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">C*/T* Ratio</span>
+        <span class="result-value teal" id="res-ratio">8.0</span>
+      </div>
+    </div>
+
+    <!-- Marginal Products Card -->
+    <div class="info-card" id="card-mp">
+      <div class="info-card-title">Marginal Products at Optimum</div>
+      <div class="result-row">
+        <span class="result-label">MP<sub>C</sub></span>
+        <span class="result-value gold" id="res-MPc">0.354</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">MP<sub>T</sub></span>
+        <span class="result-value gold" id="res-MPt">2.828</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">MP<sub>C</sub> / P<sub>C</sub></span>
+        <span class="result-value teal" id="res-MPc-per-dollar">0.177</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">MP<sub>T</sub> / P<sub>T</sub></span>
+        <span class="result-value teal" id="res-MPt-per-dollar">0.177</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">MRTS</span>
+        <span class="result-value blue" id="res-MRTS">0.125</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">P<sub>C</sub>/P<sub>T</sub></span>
+        <span class="result-value blue" id="res-price-ratio">0.125</span>
+      </div>
+    </div>
+
+    <!-- Optimality Condition -->
+    <div class="info-card" id="card-condition">
+      <div class="info-card-title">Optimality Condition</div>
+      <div class="equation" style="text-align: center; padding: 0.5rem 0;">
+        <span class="var">MP<sub>C</sub></span> <span class="op">/</span> <span class="var">P<sub>C</sub></span>
+        <span class="eq-symbol"> = </span>
+        <span class="var">MP<sub>T</sub></span> <span class="op">/</span> <span class="var">P<sub>T</sub></span>
+      </div>
+      <div class="equation" style="text-align: center; font-size: 0.72rem; color: var(--text-muted);">
+        ⟺ MRTS = P<sub>C</sub> / P<sub>T</sub>
+      </div>
+    </div>
+
+    <!-- Derivation Steps (hidden by default) -->
+    <div id="derivation-section" style="display: none;">
+      <div class="section-label">Step-by-Step Derivation</div>
+      <div class="steps">
+        <div class="step active" onclick="highlightStep(0)">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <div class="step-title">Production Function</div>
+            <div class="step-desc">Cobb-Douglas with two inputs</div>
+            <div class="step-eq" id="step-eq-1">A = 2·C<sup>0.5</sup>·T<sup>0.5</sup></div>
+          </div>
+        </div>
+        <div class="step" onclick="highlightStep(1)">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <div class="step-title">Marginal Products</div>
+            <div class="step-desc">Partial derivatives of the production function</div>
+            <div class="step-eq" id="step-eq-2">MP<sub>C</sub> = α·A·C<sup>α-1</sup>·T<sup>β</sup></div>
+          </div>
+        </div>
+        <div class="step" onclick="highlightStep(2)">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <div class="step-title">MRTS = Price Ratio</div>
+            <div class="step-desc">Tangency condition: slope of isoquant = slope of budget line</div>
+            <div class="step-eq" id="step-eq-3">(β/α)·(C/T) = P<sub>T</sub>/P<sub>C</sub></div>
+          </div>
+        </div>
+        <div class="step" onclick="highlightStep(3)">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <div class="step-title">Optimal Ratio</div>
+            <div class="step-desc">Express C in terms of T</div>
+            <div class="step-eq" id="step-eq-4">C = (α·P<sub>T</sub>)/(β·P<sub>C</sub>) · T</div>
+          </div>
+        </div>
+        <div class="step" onclick="highlightStep(4)">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <div class="step-title">Substitute into Budget</div>
+            <div class="step-desc">Solve for T* and then C*</div>
+            <div class="step-eq" id="step-eq-5">T* = βR/((α+β)P<sub>T</sub>), C* = αR/((α+β)P<sub>C</sub>)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Exploration Mode Info (hidden by default) -->
+    <div id="explore-section" style="display: none;">
+      <div class="section-label">Exploration Mode</div>
+      <div class="info-card">
+        <div class="info-card-title">Click on the Graph</div>
+        <div style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.6;">
+          Click anywhere on the graph to place a point and compare it with the optimal allocation. See how moving away from the tangency point changes achievement.
+        </div>
+      </div>
+      <div class="info-card" id="explore-card" style="display: none;">
+        <div class="info-card-title">Your Point vs. Optimal</div>
+        <div class="result-row">
+          <span class="result-label">Your C</span>
+          <span class="result-value rose" id="explore-C">—</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">Your T</span>
+          <span class="result-value rose" id="explore-T">—</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">Your Achievement</span>
+          <span class="result-value rose" id="explore-A">—</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">On Budget?</span>
+          <span class="result-value" id="explore-budget">—</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">Achievement Loss</span>
+          <span class="result-value rose" id="explore-loss">—</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const state = {
+  A: 2, alpha: 0.5, beta: 0.5,
+  R: 320, Pc: 2, Pt: 16,
+  showIsoquants: true,
+  showMP: true,
+  showSteps: false,
+  exploreMode: false,
+  explorePoint: null,
+  currentView: 'main',
+  activeStep: 0,
+  // Derived (computed on update)
+  Cstar: 0, Tstar: 0, Astar: 0,
+  // Graph bounds — FIXED so axes don't jump
+  maxC: 220, maxT: 35,
+};
+
+// ============================================================
+// CANVAS SETUP
+// ============================================================
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+const tooltip = document.getElementById('tooltip');
+
+let dpr = window.devicePixelRatio || 1;
+let W, H;
+const MARGIN = { top: 30, right: 30, bottom: 55, left: 65 };
+
+function resizeCanvas() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  W = rect.width;
+  H = rect.height;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+// ============================================================
+// MATH HELPERS
+// ============================================================
+function prodFn(C, T) {
+  if (C <= 0 || T <= 0) return 0;
+  return state.A * Math.pow(C, state.alpha) * Math.pow(T, state.beta);
+}
+
+function isoquantT(C, Abar) {
+  // A = A_tfp * C^alpha * T^beta => T = (Abar / (A_tfp * C^alpha))^(1/beta)
+  if (C <= 0) return Infinity;
+  const base = Abar / (state.A * Math.pow(C, state.alpha));
+  if (base <= 0) return Infinity;
+  return Math.pow(base, 1 / state.beta);
+}
+
+function budgetT(C) {
+  return (state.R - state.Pc * C) / state.Pt;
+}
+
+function computeOptimal() {
+  const { alpha, beta, R, Pc, Pt } = state;
+  // C* = alpha * R / ((alpha + beta) * Pc)
+  // T* = beta * R / ((alpha + beta) * Pt)
+  state.Cstar = (alpha * R) / ((alpha + beta) * Pc);
+  state.Tstar = (beta * R) / ((alpha + beta) * Pt);
+  state.Astar = prodFn(state.Cstar, state.Tstar);
+  // Axis bounds are fixed — only curves move
+}
+
+function MPc(C, T) {
+  if (C <= 0 || T <= 0) return 0;
+  return state.A * state.alpha * Math.pow(C, state.alpha - 1) * Math.pow(T, state.beta);
+}
+
+function MPt(C, T) {
+  if (C <= 0 || T <= 0) return 0;
+  return state.A * state.beta * Math.pow(C, state.alpha) * Math.pow(T, state.beta - 1);
+}
+
+// ============================================================
+// COORDINATE TRANSFORMS
+// ============================================================
+function toPixelX(c) {
+  return MARGIN.left + (c / state.maxC) * (W - MARGIN.left - MARGIN.right);
+}
+
+function toPixelY(t) {
+  return H - MARGIN.bottom - (t / state.maxT) * (H - MARGIN.top - MARGIN.bottom);
+}
+
+function fromPixelX(px) {
+  return ((px - MARGIN.left) / (W - MARGIN.left - MARGIN.right)) * state.maxC;
+}
+
+function fromPixelY(py) {
+  return ((H - MARGIN.bottom - py) / (H - MARGIN.top - MARGIN.bottom)) * state.maxT;
+}
+
+// ============================================================
+// DRAWING
+// ============================================================
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  if (state.currentView === 'main') drawMainView();
+  else if (state.currentView === 'mp') drawMPView();
+  else if (state.currentView === 'policy') drawPolicyView();
+}
+
+function drawAxes(xLabel, yLabel) {
+  const plotL = MARGIN.left;
+  const plotR = W - MARGIN.right;
+  const plotT = MARGIN.top;
+  const plotB = H - MARGIN.bottom;
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(42, 52, 85, 0.35)';
+  ctx.lineWidth = 0.5;
+
+  const nTicksX = 8;
+  const nTicksY = 6;
+
+  for (let i = 0; i <= nTicksX; i++) {
+    const val = (state.maxC / nTicksX) * i;
+    const x = toPixelX(val);
+    ctx.beginPath();
+    ctx.moveTo(x, plotT);
+    ctx.lineTo(x, plotB);
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = '#5a6380';
+    ctx.font = '10px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(Math.round(val), x, plotB + 20);
+  }
+
+  for (let i = 0; i <= nTicksY; i++) {
+    const val = (state.maxT / nTicksY) * i;
+    const y = toPixelY(val);
+    ctx.beginPath();
+    ctx.moveTo(plotL, y);
+    ctx.lineTo(plotR, y);
+    ctx.stroke();
+
+    ctx.fillStyle = '#5a6380';
+    ctx.font = '10px "JetBrains Mono", monospace';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(val.toFixed(1), plotL - 10, y);
+  }
+
+  // Axes
+  ctx.strokeStyle = '#3a4570';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(plotL, plotT);
+  ctx.lineTo(plotL, plotB);
+  ctx.lineTo(plotR, plotB);
+  ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle = '#8892b0';
+  ctx.font = '600 12px "Source Sans 3", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(xLabel, (plotL + plotR) / 2, H - 8);
+
+  ctx.save();
+  ctx.translate(16, (plotT + plotB) / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText(yLabel, 0, 0);
+  ctx.restore();
+}
+
+function drawMainView() {
+  drawAxes('Computers (C)', 'Teachers (T)');
+
+  // Draw isoquant family — levels depend ONLY on structural parameters (A, α, β)
+  if (state.showIsoquants) {
+    // Achievement range visible on the fixed axes
+    const Amax = prodFn(state.maxC * 0.9, state.maxT * 0.9);
+    const Amin = prodFn(state.maxC * 0.05, state.maxT * 0.05);
+    const nIsoq = 9;
+    const step = (Amax - Amin) / (nIsoq + 1);
+    const levels = [];
+    for (let i = 1; i <= nIsoq; i++) {
+      levels.push(Amin + step * i);
+    }
+
+    levels.forEach((Abar, idx) => {
+      // Skip if too close to the optimal (we draw that one separately)
+      if (Math.abs(Abar - state.Astar) / state.Astar < 0.03) return;
+
+      const frac = idx / (nIsoq - 1);
+      const opacity = 0.18 + 0.22 * frac;
+      const hue = Abar < state.Astar ? '#f0bc56' : '#e8913a';
+      ctx.strokeStyle = hue;
+      ctx.globalAlpha = opacity;
+      ctx.lineWidth = 1;
+      drawIsoquant(Abar);
+      ctx.globalAlpha = 1;
+    });
+  }
+
+  // Budget constraint
+  drawBudgetLine();
+
+  // Optimal isoquant (tangent one)
+  ctx.strokeStyle = '#56d4c8';
+  ctx.lineWidth = 2.5;
+  ctx.globalAlpha = 0.9;
+  drawIsoquant(state.Astar);
+  ctx.globalAlpha = 1;
+
+  // Optimal point
+  drawOptimalPoint();
+
+  // Exploration point
+  if (state.exploreMode && state.explorePoint) {
+    drawExplorePoint();
+  }
+
+  // Dashed lines from optimal to axes
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = 'rgba(110, 231, 160, 0.35)';
+  ctx.lineWidth = 1;
+
+  const ox = toPixelX(state.Cstar);
+  const oy = toPixelY(state.Tstar);
+
+  ctx.beginPath();
+  ctx.moveTo(ox, oy);
+  ctx.lineTo(ox, toPixelY(0));
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(ox, oy);
+  ctx.lineTo(toPixelX(0), oy);
+  ctx.stroke();
+
+  ctx.setLineDash([]);
+
+  // Labels at optimal
+  ctx.fillStyle = '#6ee7a0';
+  ctx.font = '600 11px "JetBrains Mono", monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(`(${state.Cstar.toFixed(1)}, ${state.Tstar.toFixed(1)})`, ox + 10, oy - 12);
+  ctx.font = '10px "JetBrains Mono", monospace';
+  ctx.fillStyle = '#56d4c8';
+  ctx.fillText(`A* = ${state.Astar.toFixed(2)}`, ox + 10, oy + 4);
+
+  // Label budget line endpoints
+  const maxBudgetC = state.R / state.Pc;
+  const maxBudgetT = state.R / state.Pt;
+  ctx.fillStyle = '#5b9cf5';
+  ctx.font = '10px "JetBrains Mono", monospace';
+  ctx.textAlign = 'center';
+
+  if (maxBudgetC <= state.maxC) {
+    ctx.fillText(`R/P_C = ${maxBudgetC.toFixed(0)}`, toPixelX(maxBudgetC), toPixelY(0) + 32);
+  }
+  if (maxBudgetT <= state.maxT) {
+    ctx.textAlign = 'right';
+    ctx.fillText(`R/P_T = ${maxBudgetT.toFixed(1)}`, toPixelX(0) - 2, toPixelY(maxBudgetT) - 6);
+  }
+}
+
+function drawIsoquant(Abar) {
+  ctx.beginPath();
+  let first = true;
+  const steps = 300;
+
+  for (let i = 1; i <= steps; i++) {
+    const C = (state.maxC / steps) * i;
+    const T = isoquantT(C, Abar);
+    if (T < 0 || T > state.maxT * 1.5 || !isFinite(T)) continue;
+
+    const px = toPixelX(C);
+    const py = toPixelY(T);
+
+    if (first) { ctx.moveTo(px, py); first = false; }
+    else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+}
+
+function drawBudgetLine() {
+  const maxBudgetC = state.R / state.Pc;
+  const maxBudgetT = state.R / state.Pt;
+
+  ctx.save();
+  ctx.setLineDash([8, 5]);
+  ctx.strokeStyle = '#5b9cf5';
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(toPixelX(0), toPixelY(maxBudgetT));
+  ctx.lineTo(toPixelX(maxBudgetC), toPixelY(0));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Fill budget feasible region lightly
+  ctx.fillStyle = 'rgba(91, 156, 245, 0.04)';
+  ctx.beginPath();
+  ctx.moveTo(toPixelX(0), toPixelY(0));
+  ctx.lineTo(toPixelX(0), toPixelY(Math.min(maxBudgetT, state.maxT)));
+  ctx.lineTo(toPixelX(Math.min(maxBudgetC, state.maxC)), toPixelY(0));
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawOptimalPoint() {
+  const ox = toPixelX(state.Cstar);
+  const oy = toPixelY(state.Tstar);
+
+  // Glow
+  const grad = ctx.createRadialGradient(ox, oy, 0, ox, oy, 18);
+  grad.addColorStop(0, 'rgba(110, 231, 160, 0.4)');
+  grad.addColorStop(1, 'rgba(110, 231, 160, 0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(ox, oy, 18, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Dot
+  ctx.fillStyle = '#6ee7a0';
+  ctx.beginPath();
+  ctx.arc(ox, oy, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#0c1021';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(ox, oy, 5, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function drawExplorePoint() {
+  const { C, T } = state.explorePoint;
+  const px = toPixelX(C);
+  const py = toPixelY(T);
+
+  // Draw isoquant through this point
+  const Aexplore = prodFn(C, T);
+  ctx.strokeStyle = '#f07070';
+  ctx.lineWidth = 1.5;
+  ctx.globalAlpha = 0.6;
+  ctx.setLineDash([3, 3]);
+  drawIsoquant(Aexplore);
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+
+  // Point
+  ctx.fillStyle = '#f07070';
+  ctx.beginPath();
+  ctx.arc(px, py, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#0c1021';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(px, py, 5, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Label
+  ctx.fillStyle = '#f07070';
+  ctx.font = '600 10px "JetBrains Mono", monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(`(${C.toFixed(1)}, ${T.toFixed(1)})`, px + 10, py - 8);
+  ctx.font = '10px "JetBrains Mono", monospace';
+  ctx.fillText(`A = ${Aexplore.toFixed(2)}`, px + 10, py + 6);
+}
+
+// ============================================================
+// MP VIEW
+// ============================================================
+function drawMPView() {
+  // Draw MP_C/P_C and MP_T/P_T as functions of the proportion spent on computers
+  drawAxes('Share Spent on Computers (%)', 'MP / Price');
+
+  const steps = 200;
+  const plotL = MARGIN.left;
+  const plotR = W - MARGIN.right;
+  const plotT_y = MARGIN.top;
+  const plotB = H - MARGIN.bottom;
+  const plotW = plotR - plotL;
+  const plotH = plotB - plotT_y;
+
+  // Override maxC/maxT for this view: x axis is 0-100%, y axis is MP/P
+  // For each share s (0 to 1), C = s*R/Pc, T = (1-s)*R/Pt
+  let maxMP = 0;
+  const dataC = [];
+  const dataT = [];
+
+  for (let i = 1; i < steps; i++) {
+    const s = i / steps;
+    const C = (s * state.R) / state.Pc;
+    const T = ((1 - s) * state.R) / state.Pt;
+    const mpc = MPc(C, T) / state.Pc;
+    const mpt = MPt(C, T) / state.Pt;
+    if (isFinite(mpc)) dataC.push({ s, val: mpc });
+    if (isFinite(mpt)) dataT.push({ s, val: mpt });
+    maxMP = Math.max(maxMP, mpc, mpt);
+  }
+
+  maxMP *= 1.2;
+
+  // Re-draw grid for this view
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(42, 52, 85, 0.35)';
+  ctx.lineWidth = 0.5;
+
+  for (let i = 0; i <= 10; i++) {
+    const x = plotL + (i / 10) * plotW;
+    ctx.beginPath(); ctx.moveTo(x, plotT_y); ctx.lineTo(x, plotB); ctx.stroke();
+    ctx.fillStyle = '#5a6380';
+    ctx.font = '10px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${i * 10}%`, x, plotB + 20);
+  }
+
+  for (let i = 0; i <= 6; i++) {
+    const val = (maxMP / 6) * i;
+    const y = plotB - (i / 6) * plotH;
+    ctx.beginPath(); ctx.moveTo(plotL, y); ctx.lineTo(plotR, y); ctx.stroke();
+    ctx.fillStyle = '#5a6380';
+    ctx.font = '10px "JetBrains Mono", monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(val.toFixed(3), plotL - 10, y + 4);
+  }
+
+  // Axes
+  ctx.strokeStyle = '#3a4570';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(plotL, plotT_y); ctx.lineTo(plotL, plotB); ctx.lineTo(plotR, plotB);
+  ctx.stroke();
+
+  ctx.fillStyle = '#8892b0';
+  ctx.font = '600 12px "Source Sans 3", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Share of Budget Spent on Computers (%)', (plotL + plotR) / 2, H - 8);
+
+  ctx.save();
+  ctx.translate(16, (plotT_y + plotB) / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('Marginal Product per Dollar', 0, 0);
+  ctx.restore();
+
+  // Draw MP_C/P_C
+  ctx.strokeStyle = '#f0bc56';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  dataC.forEach((d, i) => {
+    const x = plotL + d.s * plotW;
+    const y = plotB - (d.val / maxMP) * plotH;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Draw MP_T/P_T
+  ctx.strokeStyle = '#56d4c8';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  dataT.forEach((d, i) => {
+    const x = plotL + d.s * plotW;
+    const y = plotB - (d.val / maxMP) * plotH;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Optimal share
+  const optShare = (state.alpha) / (state.alpha + state.beta);
+  const optX = plotL + optShare * plotW;
+
+  ctx.setLineDash([5, 4]);
+  ctx.strokeStyle = '#6ee7a0';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(optX, plotT_y);
+  ctx.lineTo(optX, plotB);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = '#6ee7a0';
+  ctx.font = '600 11px "JetBrains Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(`Optimal: ${(optShare * 100).toFixed(0)}%`, optX, plotT_y + 18);
+
+  // Legend
+  ctx.font = '11px "Source Sans 3", sans-serif';
+  ctx.fillStyle = '#f0bc56';
+  ctx.fillText('● MP_C / P_C', plotR - 120, plotT_y + 20);
+  ctx.fillStyle = '#56d4c8';
+  ctx.fillText('● MP_T / P_T', plotR - 120, plotT_y + 38);
+}
+
+// ============================================================
+// POLICY VIEW
+// ============================================================
+function drawPolicyView() {
+  // Show multiple budget lines + isoquants for total resource policy visualization
+  drawAxes('Computers (C)', 'Teachers (T)');
+
+  const budgets = [state.R * 0.5, state.R * 0.75, state.R, state.R * 1.25, state.R * 1.5];
+  const colors = ['#f07070', '#e8913a', '#5b9cf5', '#56d4c8', '#6ee7a0'];
+  const labels = ['-50%', '-25%', 'Current', '+25%', '+50%'];
+
+  budgets.forEach((R, idx) => {
+    const { alpha, beta, Pc, Pt } = state;
+    const Copt = (alpha * R) / ((alpha + beta) * Pc);
+    const Topt = (beta * R) / ((alpha + beta) * Pt);
+    const Aopt = state.A * Math.pow(Copt, alpha) * Math.pow(Topt, beta);
+    const maxBudgetC = R / Pc;
+    const maxBudgetT = R / Pt;
+
+    // Budget line
+    ctx.save();
+    ctx.setLineDash([6, 4]);
+    ctx.strokeStyle = colors[idx];
+    ctx.lineWidth = idx === 2 ? 2.5 : 1.2;
+    ctx.globalAlpha = idx === 2 ? 0.9 : 0.5;
+    ctx.beginPath();
+    ctx.moveTo(toPixelX(0), toPixelY(Math.min(maxBudgetT, state.maxT * 2)));
+    ctx.lineTo(toPixelX(Math.min(maxBudgetC, state.maxC * 2)), toPixelY(0));
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // Isoquant at tangency
+    ctx.strokeStyle = colors[idx];
+    ctx.lineWidth = idx === 2 ? 2 : 1;
+    ctx.globalAlpha = idx === 2 ? 0.8 : 0.35;
+    const tempA = state.A;
+    // Draw isoquant for this level
+    ctx.beginPath();
+    let first = true;
+    for (let i = 1; i <= 300; i++) {
+      const C = (state.maxC / 300) * i;
+      const base = Aopt / (tempA * Math.pow(C, alpha));
+      if (base <= 0) continue;
+      const T = Math.pow(base, 1 / beta);
+      if (T < 0 || T > state.maxT * 1.5 || !isFinite(T)) continue;
+      const px = toPixelX(C);
+      const py = toPixelY(T);
+      if (first) { ctx.moveTo(px, py); first = false; }
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Optimal point for this budget
+    if (Copt > 0 && Copt < state.maxC && Topt > 0 && Topt < state.maxT) {
+      ctx.fillStyle = colors[idx];
+      ctx.beginPath();
+      ctx.arc(toPixelX(Copt), toPixelY(Topt), idx === 2 ? 5 : 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Label
+      ctx.font = '10px "JetBrains Mono", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(labels[idx], toPixelX(Copt) + 8, toPixelY(Topt) - 6);
+    }
+  });
+
+  // Expansion path
+  ctx.setLineDash([3, 3]);
+  ctx.strokeStyle = 'rgba(167, 139, 250, 0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+
+  budgets.forEach((R, idx) => {
+    const { alpha, beta, Pc, Pt } = state;
+    const Copt = (alpha * R) / ((alpha + beta) * Pc);
+    const Topt = (beta * R) / ((alpha + beta) * Pt);
+    if (idx === 0) ctx.moveTo(toPixelX(Copt), toPixelY(Topt));
+    else ctx.lineTo(toPixelX(Copt), toPixelY(Topt));
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Expansion path label
+  ctx.fillStyle = '#a78bfa';
+  ctx.font = 'italic 11px "Source Sans 3", sans-serif';
+  const { alpha, beta, Pc, Pt } = state;
+  const lastR = budgets[budgets.length - 1];
+  const lC = (alpha * lastR) / ((alpha + beta) * Pc);
+  const lT = (beta * lastR) / ((alpha + beta) * Pt);
+  if (lC < state.maxC && lT < state.maxT) {
+    ctx.fillText('Expansion Path', toPixelX(lC) + 8, toPixelY(lT));
+  }
+}
+
+// ============================================================
+// UPDATE UI
+// ============================================================
+function updateAll() {
+  // Read sliders
+  state.A = parseFloat(document.getElementById('slider-A').value);
+  state.alpha = parseFloat(document.getElementById('slider-alpha').value);
+  state.beta = parseFloat(document.getElementById('slider-beta').value);
+  state.R = parseFloat(document.getElementById('slider-R').value);
+  state.Pc = parseFloat(document.getElementById('slider-Pc').value);
+  state.Pt = parseFloat(document.getElementById('slider-Pt').value);
+  state.showIsoquants = document.getElementById('toggle-isoquants').checked;
+  state.showMP = document.getElementById('toggle-mp').checked;
+  state.showSteps = document.getElementById('toggle-steps').checked;
+  state.exploreMode = document.getElementById('toggle-explore').checked;
+
+  // Update value displays
+  document.getElementById('val-A').textContent = state.A.toFixed(2);
+  document.getElementById('val-alpha').textContent = state.alpha.toFixed(2);
+  document.getElementById('val-beta').textContent = state.beta.toFixed(2);
+  document.getElementById('val-R').textContent = '$' + state.R;
+  document.getElementById('val-Pc').textContent = '$' + state.Pc;
+  document.getElementById('val-Pt').textContent = '$' + state.Pt;
+
+  computeOptimal();
+
+  // Update results
+  document.getElementById('res-Cstar').textContent = state.Cstar.toFixed(1);
+  document.getElementById('res-Tstar').textContent = state.Tstar.toFixed(1);
+  document.getElementById('res-Astar').textContent = state.Astar.toFixed(2);
+  document.getElementById('res-ratio').textContent = (state.Cstar / state.Tstar).toFixed(2);
+
+  const mpc = MPc(state.Cstar, state.Tstar);
+  const mpt = MPt(state.Cstar, state.Tstar);
+  document.getElementById('res-MPc').textContent = mpc.toFixed(4);
+  document.getElementById('res-MPt').textContent = mpt.toFixed(4);
+  document.getElementById('res-MPc-per-dollar').textContent = (mpc / state.Pc).toFixed(4);
+  document.getElementById('res-MPt-per-dollar').textContent = (mpt / state.Pt).toFixed(4);
+
+  const mrts = mpc / mpt;
+  const priceRatio = state.Pc / state.Pt;
+  document.getElementById('res-MRTS').textContent = mrts.toFixed(4);
+  document.getElementById('res-price-ratio').textContent = priceRatio.toFixed(4);
+
+  // Update production function equation display
+  document.getElementById('eq-production').innerHTML =
+    `<span class="var">A</span> <span class="op">=</span> <span class="val">${state.A.toFixed(1)}</span> <span class="op">·</span> <span class="var">C</span><sup><span class="val">${state.alpha.toFixed(2)}</span></sup> <span class="op">·</span> <span class="var">T</span><sup><span class="val">${state.beta.toFixed(2)}</span></sup>`;
+
+  // Returns to scale badge
+  const rts = state.alpha + state.beta;
+  const badge = document.getElementById('badge-status');
+  if (Math.abs(rts - 1) < 0.01) {
+    badge.className = 'badge badge-green';
+    badge.textContent = '✓ CRS';
+  } else if (rts < 1) {
+    badge.className = 'badge badge-rose';
+    badge.textContent = 'DRS (α+β=' + rts.toFixed(2) + ')';
+  } else {
+    badge.className = 'badge badge-green';
+    badge.textContent = 'IRS (α+β=' + rts.toFixed(2) + ')';
+  }
+
+  // Derivation section
+  document.getElementById('derivation-section').style.display = state.showSteps ? 'block' : 'none';
+  document.getElementById('explore-section').style.display = state.exploreMode ? 'block' : 'none';
+
+  // Marginal products card
+  document.getElementById('card-mp').style.display = state.showMP ? 'block' : 'none';
+
+  // Update derivation steps with current values
+  updateDerivationSteps();
+
+  // Exploration
+  if (state.exploreMode && state.explorePoint) {
+    updateExploreInfo();
+  }
+
+  draw();
+}
+
+function updateDerivationSteps() {
+  const { A, alpha, beta, R, Pc, Pt, Cstar, Tstar, Astar } = state;
+  document.getElementById('step-eq-1').innerHTML =
+    `A = ${A.toFixed(1)}·C<sup>${alpha.toFixed(2)}</sup>·T<sup>${beta.toFixed(2)}</sup>`;
+  document.getElementById('step-eq-2').innerHTML =
+    `MP<sub>C</sub> = ${(A * alpha).toFixed(2)}·C<sup>${(alpha-1).toFixed(2)}</sup>·T<sup>${beta.toFixed(2)}</sup><br>MP<sub>T</sub> = ${(A * beta).toFixed(2)}·C<sup>${alpha.toFixed(2)}</sup>·T<sup>${(beta-1).toFixed(2)}</sup>`;
+  document.getElementById('step-eq-3').innerHTML =
+    `(${beta.toFixed(2)}/${alpha.toFixed(2)})·(C/T) = ${Pt}/${Pc} = ${(Pt/Pc).toFixed(2)}`;
+  document.getElementById('step-eq-4').innerHTML =
+    `C = (${alpha.toFixed(2)}·${Pt})/(${beta.toFixed(2)}·${Pc})·T = ${((alpha*Pt)/(beta*Pc)).toFixed(2)}·T`;
+  document.getElementById('step-eq-5').innerHTML =
+    `T* = ${beta.toFixed(2)}·${R}/(${(alpha+beta).toFixed(2)}·${Pt}) = <b>${Tstar.toFixed(2)}</b><br>C* = ${alpha.toFixed(2)}·${R}/(${(alpha+beta).toFixed(2)}·${Pc}) = <b>${Cstar.toFixed(2)}</b>`;
+}
+
+function updateExploreInfo() {
+  const { C, T } = state.explorePoint;
+  const Aexplore = prodFn(C, T);
+  const cost = state.Pc * C + state.Pt * T;
+  const onBudget = Math.abs(cost - state.R) < state.R * 0.03;
+  const overBudget = cost > state.R;
+  const loss = ((state.Astar - Aexplore) / state.Astar * 100);
+
+  document.getElementById('explore-card').style.display = 'block';
+  document.getElementById('explore-C').textContent = C.toFixed(1);
+  document.getElementById('explore-T').textContent = T.toFixed(1);
+  document.getElementById('explore-A').textContent = Aexplore.toFixed(2);
+
+  const budgetEl = document.getElementById('explore-budget');
+  if (onBudget) {
+    budgetEl.textContent = '≈ Yes';
+    budgetEl.className = 'result-value green';
+  } else if (overBudget) {
+    budgetEl.textContent = `Over (+$${(cost - state.R).toFixed(0)})`;
+    budgetEl.className = 'result-value rose';
+  } else {
+    budgetEl.textContent = `Under (-$${(state.R - cost).toFixed(0)})`;
+    budgetEl.className = 'result-value blue';
+  }
+
+  const lossEl = document.getElementById('explore-loss');
+  if (loss > 0) {
+    lossEl.textContent = `-${loss.toFixed(1)}%`;
+    lossEl.className = 'result-value rose';
+  } else {
+    lossEl.textContent = `+${(-loss).toFixed(1)}%`;
+    lossEl.className = 'result-value green';
+  }
+}
+
+// ============================================================
+// INTERACTIONS
+// ============================================================
+
+// Sliders
+document.querySelectorAll('input[type="range"], input[type="checkbox"]').forEach(el => {
+  el.addEventListener('input', updateAll);
+});
+
+// Canvas hover tooltip
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  if (state.currentView !== 'main') {
+    tooltip.style.display = 'none';
+    return;
+  }
+
+  const C = fromPixelX(mx);
+  const T = fromPixelY(my);
+
+  if (C < 0 || T < 0 || C > state.maxC || T > state.maxT) {
+    tooltip.style.display = 'none';
+    return;
+  }
+
+  const A = prodFn(C, T);
+  const cost = state.Pc * C + state.Pt * T;
+
+  tooltip.style.display = 'block';
+  tooltip.style.left = (mx + 18) + 'px';
+  tooltip.style.top = (my - 10) + 'px';
+
+  // Don't let tooltip overflow right
+  if (mx + 200 > W) tooltip.style.left = (mx - 180) + 'px';
+
+  tooltip.innerHTML = `
+    <div class="tt-row"><span class="tt-label">Computers</span><span class="tt-val">${C.toFixed(1)}</span></div>
+    <div class="tt-row"><span class="tt-label">Teachers</span><span class="tt-val">${T.toFixed(1)}</span></div>
+    <div class="tt-row"><span class="tt-label">Achievement</span><span class="tt-val">${A.toFixed(2)}</span></div>
+    <div class="tt-row"><span class="tt-label">Cost</span><span class="tt-val">$${cost.toFixed(0)}</span></div>
+  `;
+});
+
+canvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+
+// Canvas click for exploration
+canvas.addEventListener('click', (e) => {
+  if (!state.exploreMode || state.currentView !== 'main') return;
+
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const C = fromPixelX(mx);
+  const T = fromPixelY(my);
+
+  if (C > 0 && T > 0) {
+    state.explorePoint = { C, T };
+    updateExploreInfo();
+    draw();
+  }
+});
+
+// View tabs
+function setView(view, btn) {
+  state.currentView = view;
+  document.querySelectorAll('.graph-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+
+  // Update legend
+  const legend = document.getElementById('legend-main');
+  if (view === 'main') {
+    legend.innerHTML = `
+      <div class="legend-item"><span class="legend-swatch" style="background: var(--isoquant-1);"></span>Isoquants</div>
+      <div class="legend-item"><span class="legend-swatch dashed"></span>Budget Line</div>
+      <div class="legend-item"><span class="legend-swatch" style="background: var(--optimal-dot); width: 8px; height: 8px; border-radius: 50%;"></span>Optimal</div>`;
+  } else if (view === 'mp') {
+    legend.innerHTML = `
+      <div class="legend-item"><span class="legend-swatch" style="background: #f0bc56;"></span>MP<sub>C</sub>/P<sub>C</sub></div>
+      <div class="legend-item"><span class="legend-swatch" style="background: #56d4c8;"></span>MP<sub>T</sub>/P<sub>T</sub></div>
+      <div class="legend-item"><span class="legend-swatch" style="background: #6ee7a0; width: 1px; height: 14px; border-radius: 0;"></span>Equilibrium</div>`;
+  } else {
+    legend.innerHTML = `
+      <div class="legend-item"><span class="legend-swatch" style="background: #f07070;"></span>-50%</div>
+      <div class="legend-item"><span class="legend-swatch" style="background: #e8913a;"></span>-25%</div>
+      <div class="legend-item"><span class="legend-swatch" style="background: #5b9cf5;"></span>Current</div>
+      <div class="legend-item"><span class="legend-swatch" style="background: #56d4c8;"></span>+25%</div>
+      <div class="legend-item"><span class="legend-swatch" style="background: #6ee7a0;"></span>+50%</div>
+      <div class="legend-item"><span class="legend-swatch" style="background: #a78bfa;"></span>Expansion Path</div>`;
+  }
+
+  draw();
+}
+
+// Derivation step highlight
+function highlightStep(idx) {
+  state.activeStep = idx;
+  document.querySelectorAll('.step').forEach((s, i) => {
+    s.classList.toggle('active', i === idx);
+  });
+}
+
+// Presets
+function applyPreset(name) {
+  const presets = {
+    'lecture': { A: 2, alpha: 0.5, beta: 0.5, R: 320, Pc: 2, Pt: 16 },
+    'tech-heavy': { A: 2, alpha: 0.7, beta: 0.3, R: 320, Pc: 2, Pt: 16 },
+    'teacher-focus': { A: 2, alpha: 0.3, beta: 0.7, R: 320, Pc: 2, Pt: 16 },
+    'tight-budget': { A: 2, alpha: 0.5, beta: 0.5, R: 120, Pc: 2, Pt: 16 },
+    'rich-district': { A: 2, alpha: 0.5, beta: 0.5, R: 600, Pc: 2, Pt: 16 },
+  };
+
+  const p = presets[name];
+  if (!p) return;
+
+  // Animate sliders
+  document.getElementById('slider-A').value = p.A;
+  document.getElementById('slider-alpha').value = p.alpha;
+  document.getElementById('slider-beta').value = p.beta;
+  document.getElementById('slider-R').value = p.R;
+  document.getElementById('slider-Pc').value = p.Pc;
+  document.getElementById('slider-Pt').value = p.Pt;
+
+  state.explorePoint = null;
+  updateAll();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('resize', () => { resizeCanvas(); draw(); });
+
+function init() {
+  resizeCanvas();
+  computeOptimal();
+  updateAll();
+}
+
+// Small delay to let fonts load
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(init);
+} else {
+  setTimeout(init, 200);
+}
+</script>
+
+</body>
+</html>
